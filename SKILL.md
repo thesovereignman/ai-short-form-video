@@ -7,11 +7,24 @@ description: Produce a complete AI-generated short-form video (Reels, Shorts, Ti
 
 This skill guides an agent through producing a complete short-form video for a creator or brand from scratch. Follow the phases in order. Each phase has decisions to surface to the user before proceeding.
 
+## Provider selection and existing work
+
+Carry forward approved scripts, footage, likeness, voice, CTA and review gates.
+Ask only for missing inputs; a model/provider change does not reset prior approvals.
+Reuse accepted footage before generating replacement scenes.
+
+When the user selects **Sume**, read `references/sume.md` and the migration audit.
+Use its MCP or server-side helper for generation, pricing and job lifecycle instead
+of the legacy Replicate examples below. `VIDEO_GENERATION_PROVIDER` defaults to
+`legacy`; setting it to `sume` opts into the new helper. Keep the legacy path until
+real Sume jobs have passed for every mapped model. Never silently upgrade a model
+or substitute a preset voice for the user's own voice.
+
 ## Requirements
 
 This skill uses external services. Verify access before starting and ask the user to connect anything missing:
 
-- **Video generation** — a Replicate API token (set as the `REPLICATE_API_TOKEN` environment variable, or ask the user how their credentials are stored). Used for Seedance (video) and GPT Image (character art).
+- **Video / image generation** — either connected Sume MCP or server-side `SUME_API_KEY` for the Sume route; the legacy route uses `REPLICATE_API_TOKEN`. Do not request secrets in chat. See `references/sume.md` for exact estimates, ownership checks and retry recovery.
 - **Text-to-speech** — an ElevenLabs integration (direct API or via an MCP such as Zapier). Voice selection is configured on the user's side.
 - **Music/SFX** (optional) — a music generation service such as MusicGPT (direct or via MCP).
 - **Publishing** (optional) — a social scheduling integration such as Buffer (direct or via MCP), plus a way to host the finished video at a public URL (e.g. Google Drive with public sharing).
@@ -89,6 +102,10 @@ Each beat = one video-generation clip.
 
 Generate the VO before scenes — the audio duration drives everything else.
 
+For Sume, follow the voice/likeness section in `references/sume.md`. Existing
+Higgsfield/ElevenLabs voice IDs are not portable. Preserve approved audio or test
+an authorized voice-reference workflow; a shared preset voice is not a clone.
+
 Call your ElevenLabs integration with the approved script, delivery instructions (pace, tone, energy, pauses — e.g. "Calm and confident. Natural pauses between punchy lines. Not hype, not salesy. Like telling a friend something useful over coffee."), and `output_format="mp3_44100_128"`.
 
 - **Download the returned URL immediately** — hosted TTS URLs are often short-lived S3 links that expire in minutes: `wget -q "<url>" -O /tmp/vo.mp3`
@@ -106,6 +123,10 @@ If the user has a branded avatar, use GPT Image (img2img) to create a stylized v
 Without passing the avatar as `input_images`, the model invents a generic character. The avatar reference preserves the face, clothing, accessories, and personality of the brand character.
 
 ### Submit to GPT Image via Replicate
+
+**Legacy route only.** Sume uses `image_urls`, not `input_images`, through its image
+router. Verify its current supported aspect ratio; the legacy `2:3` example below
+is not a supported ratio in the current Sume GPT Image 2 catalog.
 
 Upload the avatar to Replicate's Files API first — **multipart only**: `curl -F "content=@avatar.jpg;type=image/jpeg" -H "Authorization: Bearer $REPLICATE_API_TOKEN" https://api.replicate.com/v1/files` (base64 and `--data-binary` both fail).
 
@@ -147,7 +168,9 @@ Poll until succeeded, download the PNG, and **show it to the user before spendin
 
 ## Phase 4 — Scene Generation
 
-Submit ALL scene predictions in parallel before polling any — they run concurrently on Replicate.
+Submit independent scenes within the selected provider's current concurrency
+limits. For Sume use its workflow and bounded job polling; the code below is the
+legacy Replicate route. Never resubmit because a wait slice expired.
 
 ### Seedance 2.0 — key inputs
 
@@ -422,6 +445,10 @@ Offer a revision pass. Common quick fixes (each ~10–15s, no scene regeneration
 ---
 
 ## Phase 9 — Host & Publish (optional)
+
+When the user asks to see the finished video first, publishing requires their
+approval of that finished version. Creating an asset or preview is not publishing
+approval. Verify the actual account and clickable CTA placement on each platform.
 
 ### Hosting — the video needs a public URL
 

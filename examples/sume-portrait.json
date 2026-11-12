@@ -1,0 +1,11 @@
+{
+  "model": "gpt-image-2",
+  "input": {
+    "prompt": "Documentary portrait of a fictional adult roofing contractor in worn work clothes, standing safely on the ground in natural daylight.",
+    "aspect_ratio": "9:16",
+    "resolution": "1K",
+    "quality": "high",
+    "output_format": "png",
+    "num_images": 1
+  }
+}

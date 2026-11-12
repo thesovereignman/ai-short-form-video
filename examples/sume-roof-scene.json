@@ -1,0 +1,10 @@
+{
+  "model": "seedance-2",
+  "input": {
+    "prompt": "Documentary close-up of gloved roofer hands securing a shingle, safe working position, natural daylight.",
+    "duration": 8,
+    "resolution": "720p",
+    "aspect_ratio": "9:16",
+    "generate_audio": false
+  }
+}
